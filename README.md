@@ -24,7 +24,7 @@ sudo apt-get install ros-kinetic-turtlebot-simulator ros-kinetic-turtlebot-teleo
 
 ## 4. Loading Maze into Gazebo
 
-`rosrun gazebo_ros spawn_model -file ~/{PATH_to_repo}/maze_model/model.sdf -sdf -model -maze`
+`rosrun gazebo_ros spawn_model -file ~/{PATH_to_repo}/Model_files/maze_model/model.sdf -sdf -model -maze`
 
 ## 5. How to run the program
 

@@ -2,7 +2,7 @@
 
 ## 1. Install ros-kinetic-turtlebot 
 
-sudo apt-get install ros-kinetic-turtlebot-simulator ros-kinetic-turtlebot-teleop
+`sudo apt-get install ros-kinetic-turtlebot-simulator ros-kinetic-turtlebot-teleop`
 
 ## 2. Clone my repository
 

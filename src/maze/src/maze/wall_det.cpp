@@ -2,9 +2,13 @@
 
 using namespace std;
 
+/**
+ *@brief Wall Detection
+ **/
+
 WallDetect::WallDetect():_spinner(4)
 {
-	_spinner.start();
+	_spinner.start(); //async spinner
 
 	_laser_sub = _nh.subscribe("/laserscan", 1, & WallDetect::laserCb, this);
   _odom_sub = _nh.subscribe("/odom", 1, & WallDetect::odomCb, this);
@@ -24,11 +28,11 @@ WallDetect::~WallDetect()
 
 void WallDetect::initParams()
 {
-	_flag = false;
-	_minLaserValues = 60;
-	_intervalEpsilon = 1.5;
-	_distanceToWall = 0.4;
-	_angle = 1.57;
+	_flag = false;                   //To check if a wall has been detected
+	_minLaserValues = 60;            //Number of laser points that must be next to each other
+	_intervalEpsilon = 1.5;          //Upper and Lower bounds of the laser
+	_distanceToWall = 0.4;           //Distance between wall and bot
+	_angle = 1.57;                   //90 Degrees in radian
 }
 
 void WallDetect::laserCb(const sensor_msgs::LaserScan::ConstPtr &laser)
@@ -43,18 +47,18 @@ void WallDetect::odomCb(const nav_msgs::Odometry::ConstPtr &odom)
 	_odom_ptr = odom;	
 }
 
+//Service for wall detection
 bool WallDetect::serviceCb(maze::det_srv::Request  &req,  maze::det_srv::Response &res)
 {
 	bool flag;
 	if(req.detection_flag)
 	{
-
 		flag = wallDetection(req.actMinLaserValue, req.turnSpeed);
-		//ROS_INFO("[Maze Solver] Wall Detection executed successfully");
 		res.success = flag;
 	}
 }
 
+//Service callback for wall detection
 bool WallDetect::wallDetection(float actMinLaserValue, float turnSpeed)
 {
 	_det_mutex.lock();
@@ -65,34 +69,29 @@ bool WallDetect::wallDetection(float actMinLaserValue, float turnSpeed)
 	float tmpAngle;
 	auto ranges = _laser_ptr->ranges;
 	int ranges_len = ranges.size();
-	if(actMinLaserValue<_distanceToWall)
+	if(actMinLaserValue<_distanceToWall) //obstacle detected
 	{
 		rotate_angle(_angle, turnSpeed);
 	}
 	else
 	{
-		//std::vector<std::vector<float>> arrVal;
 		std::vector<float> arrVal1;
 		std::vector<float> arrVal2;
-		//int arrVal1[100],arrVal2[100];
 		int i = 0;
 		while(i< ranges_len)
 		{
 			int valCounter = 0;
 			for(int k=i+1; k< ranges_len; k++)
 			{
+				//Check if the laser points are within the interval
 				if((ranges[i]-_intervalEpsilon)<=ranges[k]<=(ranges[i]+_intervalEpsilon))
 					valCounter += 1;
 				else
 				{
 					if(valCounter>_minLaserValues)
 					{
-						//arrVal.push_back(std::vector<float>());
 						arrVal1.push_back(i);
 						arrVal2.push_back(k);
-						//arrVal1[j] = i;
-						//arrVal2[j] = k;
-						//j++;
 					}
 					valCounter = 0;
 					i = k;
@@ -102,24 +101,25 @@ bool WallDetect::wallDetection(float actMinLaserValue, float turnSpeed)
 			}
 
 		}
+
+		//Bot is turned towards the wall
 		getLaserIndex = 180;
 		if(arrVal1.empty()==false && arrVal2.empty()==false)
 		{
 			auto max_i = *max_element(arrVal1.begin(), arrVal1.end());
 			auto max_k = *max_element(arrVal2.begin(), arrVal2.end());
-			//float a = float(max_k);
-			getLaserIndex = int(floor((float(max_i) + float(max_k)/2)));
+			getLaserIndex = int(floor((float(max_i) + float(max_k)/2)));   //Wall with the maximum distance is chosen
 		}
 		if(getLaserIndex<=175 || getLaserIndex>=185)
 		{
 			tmpAngle = _laser_ptr->angle_min + (getLaserIndex * _laser_ptr->angle_increment);
 			if(getLaserIndex<170)
 			{
-				rotate_angle(abs(tmpAngle),-0.3);
+				rotate_angle(abs(tmpAngle),-0.3); //rotate right
 			}
 			else
 			{
-				rotate_angle(abs(tmpAngle),0.3);
+				rotate_angle(abs(tmpAngle),0.3); //rotate left
 			}
 		}
 		_flag = true;
@@ -139,7 +139,8 @@ void WallDetect::rotate_angle(float angle, float speed)
 
 	float t0 = ros::Time::now().toSec();
 	float curren_angle = 0;
-
+  
+  //Rotate the bot
 	while(curren_angle < relative_angle)
 	{
 		_vel_pub.publish(_vel);
@@ -147,6 +148,7 @@ void WallDetect::rotate_angle(float angle, float speed)
 		curren_angle = abs(angular_speed)*(t1-t0);
 	}
 
+  //Bot stops after turning
 	_vel.linear.x = 0.0;
 	_vel.angular.z = 0;
 	_vel_pub.publish(_vel);

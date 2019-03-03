@@ -3,6 +3,10 @@
 #include <maze/mazeSolverAction.h>
 #include <maze/m_goal.h>
 
+/**
+ *@brief Action Server using Goal Callback Method
+ **/ 
+
 class act_server
 {
 protected:
@@ -27,18 +31,21 @@ public:
 	~act_server(void)
 	{
 	}
-
+  
+  //Goal is updated
 	void goalCB()
 	{
 		goal_ = as_.acceptNewGoal()->goal;
 	}
 
+  //Action preempted
 	void preemptCB()
 	{
 		ROS_INFO("%s: Preempted", action_name_.c_str());
 		as_.setPreempted();
 	}
 
+  //Checks if the process is complete; Publishes the feedback until the goal is reached
 	void callback(const maze::m_goal::ConstPtr &msg)
 	{
 		if(!as_.isActive())
@@ -62,6 +69,6 @@ int main(int argc, char** argv)
 	ros::init(argc,argv, "action_server_node");
 	act_server action_server_node("action_server_node");
 	ros::spin();
-	//ros::waitForShutdown();
+	ros::waitForShutdown();
 	return 0;
 }

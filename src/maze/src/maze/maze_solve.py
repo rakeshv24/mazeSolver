@@ -11,7 +11,9 @@ import actionlib
 from maze.srv import det_srv,solver
 from maze.msg import m_goal,mazeSolverAction, mazeSolverGoal
 
-
+'''
+Service Client for wall detection
+'''
 def wall_det_service(flag,actMinLaserValue,turnSpeed):
     rospy.wait_for_service('mazesolver/wall_detection')
     try:
@@ -22,6 +24,9 @@ def wall_det_service(flag,actMinLaserValue,turnSpeed):
     except rospy.ServiceException, e:
         rospy.logerr("Service call failed %s", e)
 
+'''
+Action Client. This will keep running until the bot exits the maze i.e., reaches the goal. 
+'''
 def action_client():
     client = actionlib.SimpleActionClient('action_server_node', mazeSolverAction)
     client.wait_for_server()
@@ -39,34 +44,34 @@ class MazeSolver:
         self.initialize_sub_pub()
         self.initialize_params()
         self.driveState = "WallDetection"
-        self.pid = PID(self.kp, self.ki, self.kd, self.outMin, self.outMax, self.iMin, self.iMax)
+        self.pid = PID(self.kp, self.ki, self.kd, self.outMin, self.outMax, self.iMin, self.iMax)  # Initializing PID
         rospy.Timer(rospy.Duration(0.1), self.startSolver)
 
     def initialize_sub_pub(self):
-    	self.laser_sub = rospy.Subscriber('/laserscan', LaserScan, self.laserscan_callback)
+        self.laser_sub = rospy.Subscriber('/laserscan', LaserScan, self.laserscan_callback)
         self.odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
         self.vel_pub = rospy.Publisher('/mobile_base/commands/velocity', Twist, queue_size = 5)
         self.goal_pub = rospy.Publisher('/mazesolver/goal', m_goal, queue_size = 1)
 
     def initialize_params(self):
-    	self.vel = Twist()
+        self.vel = Twist()
         self.maze_goal = m_goal()
         self._flag = False
         self.laser = None
         self.odom = None
-        self.minLaserValues = 60
-        self.intervalEpsilon = 1.5
+        self.minLaserValues = 60                # Number of laser points that must be next to each other
+        self.intervalEpsilon = 1.5              # Upper and Lower bounds of the laser
         self.mutex2 = Lock()
         self.knownPoints = []
-        self.epsilonAroundPoints = 0.1
+        self.epsilonAroundPoints = 0.1          # Used to detect if the bot is circling around the same path 
         self.timeoutForDetection = 12
-        self.leftHand = True
-        self.laserIndex = 359
+        self.leftHand = True                    # If left laser is used
+        self.laserIndex = 359                   # Left laser index
         self.turnSpeed = -0.3
-        self.distanceToWall = 0.4
+        self.distanceToWall = 0.4               # Distance between wall and bot  
         self.counter = 0
-        self.angle = 1.57
-        self.minLasersSide = [120,170]
+        self.angle = 1.57                       # 90 Degrees
+        self.minLasersSide = [130,170]          # Used for obstacle detection
         self.mutex = Lock()
         self.kp = 6
         self.ki = 2
@@ -83,56 +88,57 @@ class MazeSolver:
         self.laser = laser_msg
 
     def startSolver(self,dummy):
-        #rospy.loginfo("start Maze Solver Node")
-        if self._flag:
-            if(not self.leftHand):
+        if self._flag:                           # If service is called, the bot starts solving 
+            
+            if(not self.leftHand):               # If right sensor is used 
                 self.laserIndex = 0
-                self.minLasersSide = [190, 240]
+                self.minLasersSide = [190, 230]
                 self.turnSpeed *= (-1)
 
             if(self.laser and self.odom):
-
+                
+                # Storing the origin of the bot      
                 if(len(self.knownPoints) == 0):
                     self.knownPoints.append([self.odom.pose.pose.position.x, self.odom.pose.pose.position.y, time.time()])
-
+                
+                # Minimum laser value for obstacle detection
                 actMinLaserValue = min(min(self.laser.ranges[170:190], self.laser.ranges[self.minLasersSide[0] : self.minLasersSide[1]]))
 
-                #print actMinLaserValue
+                # If there are no objects in the vicinity
                 if actMinLaserValue>20:
                     self.counter +=1
 
-                if self.counter>100:
+                # Bot has reached the goal successfully if the laser value is large for a certain duration 
+                if self.counter>150:
                     self.maze_goal.res = 1
-                    self.goal_pub.publish(self.maze_goal)
+                    self.goal_pub.publish(self.maze_goal)   #Publishes that the bot has reached the goal
                     
-
                 else:
-
 
                     if(self.driveState == "WallDetection"):
                         self.vel.linear.x = 0.0
                         self.vel.angular.z = 0.0
-                        flag = wall_det_service(True,actMinLaserValue,self.turnSpeed)
-                        
+                        flag = wall_det_service(True,actMinLaserValue,self.turnSpeed)      # Calls the service to detect for walls
                         if flag:
-                        	self.driveState = "driveToWall"
+                            self.driveState = "driveToWall"                                # Wall has been detected; Drive to the wall
                         self.pid.resetValues()
 
                     elif(self.driveState == "driveToWall"):
                         if(self.mutex.locked() == False):
-                            if(actMinLaserValue <= self.distanceToWall):
-                                self.knownPoints.append([self.odom.pose.pose.position.x,self.odom.pose.pose.position.y, time.time()])
-
+                            if(actMinLaserValue <= self.distanceToWall):                                                                       # Either the bot has reached the wall or an obstacle is found in front of the bot
+                                self.knownPoints.append([self.odom.pose.pose.position.x,self.odom.pose.pose.position.y, time.time()])          # Storing the actual position of the bot for loop detection
                                 self.vel.linear.x = 0.0
                                 self.vel.angular.z = 0.0
-                                self.rotate_angle(self.angle, self.turnSpeed)
+                                self.rotate_angle(self.angle, self.turnSpeed)                                                                  # Turn and follow
                                 self.driveState = "WallFollow"
                             else:
-                                self.vel.linear.x = 0.3
+                                self.vel.linear.x = 0.3                                                                                        # Else drive to the wall
                                 self.vel.angular.z = 0.0
 
                     elif(self.driveState == "WallFollow"):
                         if(self.mutex.locked() == False):
+
+                            # Checking the traversed points to detect loops
                             for i in range(0, len(self.knownPoints)):
                                 if(self.odom.pose.pose.position.x - self.epsilonAroundPoints <= self.knownPoints[i][0] <= self.odom.pose.pose.position.x + self.epsilonAroundPoints and
                                 self.odom.pose.pose.position.y - self.epsilonAroundPoints <= self.knownPoints[i][1] <= self.odom.pose.pose.position.y + self.epsilonAroundPoints and
@@ -140,10 +146,11 @@ class MazeSolver:
                                     rospy.loginfo("Loop detected")
                                     self.driveState = "WallDetection"
 
+                            # Else follow the wall
                             self.wallFollower(actMinLaserValue)
 
                     self.maze_goal.res = 0
-                    self.goal_pub.publish(self.maze_goal)
+                    self.goal_pub.publish(self.maze_goal)  #Publishes that the bot has not reached the goal
                     
 
                 self.vel_pub.publish(self.vel)
@@ -158,6 +165,7 @@ class MazeSolver:
             if(self.leftHand):
                 pidValue = pidValue * (-1)
 
+            # Obstacle in front of the bot
             if(actMinLaserValue < self.distanceToWall):
                 self.rotate_angle(self.angle, self.turnSpeed)
             elif(pidValue == 0):
@@ -180,12 +188,12 @@ class MazeSolver:
 
             t0 = rospy.Time.now().to_sec()
             current_angle = 0
-
+            #Rotate the bot
             while(current_angle < relative_angle):
                 self.vel_pub.publish(self.vel)
                 t1 = rospy.Time.now().to_sec()
                 current_angle = abs(angular_speed)*(t1-t0)
-
+            #Bot stops after turning
             self.vel.linear.x = 0.0
             self.vel.angular.z = 0
             self.vel_pub.publish(self.vel)
@@ -193,12 +201,15 @@ class MazeSolver:
         finally:
             self.mutex.release()
 
+    '''
+    Service to start solving the maze.
+    It also invokes a goal based action server.
+    '''
     def serviceCB(self,req):
         if req.solver_flag:
             self._flag = True
             rospy.loginfo("Mission Started")
             result = action_client()
-            #rospy.loginfo("hi")
             if result:
                 self._flag = False
                 rospy.loginfo("Mission Accomplished!!!")

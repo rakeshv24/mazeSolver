@@ -71,7 +71,7 @@ class MazeSolver:
         self.distanceToWall = 0.4               # Distance between wall and bot  
         self.counter = 0
         self.angle = 1.57                       # 90 Degrees
-        self.minLasersSide = [130,170]          # Used for obstacle detection
+        self.minLasersSide = [150,170]          # Used for obstacle detection
         self.mutex = Lock()
         self.kp = 6
         self.ki = 2
@@ -92,7 +92,7 @@ class MazeSolver:
             
             if(not self.leftHand):               # If right sensor is used 
                 self.laserIndex = 0
-                self.minLasersSide = [190, 230]
+                self.minLasersSide = [190, 210]
                 self.turnSpeed *= (-1)
 
             if(self.laser and self.odom):

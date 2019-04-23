@@ -4,7 +4,7 @@
 
 `sudo apt-get install ros-kinetic-turtlebot-simulator ros-kinetic-turtlebot-teleop`
 
-## 2. Clone my repository
+## 2. Clone this repository
 
 ## 3. Mounting Hokuyo Laser Scanner onto the Turtlebot
 
@@ -26,7 +26,7 @@
 
 `rosrun gazebo_ros spawn_model -file ~/{PATH_to_repo}/Model_files/maze_model/model.sdf -sdf -model -maze`
 
-## 5. How to run the program
+## 5. Run the program
 
 `cd ~/{PATH_to_repo}`
 

@@ -1,5 +1,5 @@
-#ifndef WALLDETECT_H
-#define WALLDETECT_H
+#ifndef WALL_DET_H
+#define WALL_DET_H
 
 #pragma once
 #include "ros/ros.h"

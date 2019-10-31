@@ -32,20 +32,20 @@ public:
 	{
 	}
   
-  //Goal is updated
+   //Goal is updated
 	void goalCB()
 	{
 		goal_ = as_.acceptNewGoal()->goal;
 	}
 
-  //Action preempted
+   //Action preempted
 	void preemptCB()
 	{
 		ROS_INFO("%s: Preempted", action_name_.c_str());
 		as_.setPreempted();
 	}
 
-  //Checks if the process is complete; Publishes the feedback until the goal is reached
+   //Checks if the process is complete; Publishes the feedback until the goal is reached
 	void callback(const maze::m_goal::ConstPtr &msg)
 	{
 		if(!as_.isActive())

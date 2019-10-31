@@ -8,9 +8,9 @@ using namespace std;
 
 WallDetect::WallDetect():_spinner(4)
 {
-	_spinner.start(); //async spinner
+  _spinner.start(); //async spinner
 
-	_laser_sub = _nh.subscribe("/laserscan", 1, & WallDetect::laserCb, this);
+  _laser_sub = _nh.subscribe("/laserscan", 1, & WallDetect::laserCb, this);
   _odom_sub = _nh.subscribe("/odom", 1, & WallDetect::odomCb, this);
 
   _vel_pub = _nh.advertise < geometry_msgs::Twist > ("/mobile_base/commands/velocity", 5);

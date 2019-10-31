@@ -12,7 +12,7 @@
 
 `sudo rm -r turtlebot_description`
 
-`cd ~/{PATH_to_repo}/Model_files`
+`cd ~/{PATH_to_repo}/model_files`
 
 `sudo mv turtlebot_description /opt/ros/kinetic/share`
 
@@ -30,7 +30,9 @@
 
 `cd ~/{PATH_to_repo}`
 
-`source install/setup.bash`
+`catkin build`
+
+`source devel/setup.bash`
 
 `roslaunch maze mazeSolver.launch start_mazeSolver:=True`
 

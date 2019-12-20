@@ -24,7 +24,7 @@
 
 ## 4. Loading Maze into Gazebo
 
-`rosrun gazebo_ros spawn_model -file ~/{PATH_to_repo}/Model_files/maze_model/model.sdf -sdf -model -maze`
+`rosrun gazebo_ros spawn_model -file ~/{PATH_to_repo}/model_files/maze_model/model.sdf -sdf -model -maze`
 
 ## 5. Run the program
 
